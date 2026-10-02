@@ -73,3 +73,4 @@ npm run build
 
 The build verifies TypeScript and produces the static app in `dist/`. Live database, OAuth and Mailgun checks require a configured Supabase project, a Google OAuth web client and a verified Mailgun domain. Once provisioned, exercise customer signup/login, Google OAuth, cart edits/refresh, checkout, inventory updates, order visibility, email contents, admin product/category changes, uploads, and order status transitions against that project.
 # lumahome
+# LUMA_Home
