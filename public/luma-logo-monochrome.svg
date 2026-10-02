@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 140" role="img" aria-labelledby="title">
+  <title id="title">LUMA HOME — monochrome logo</title>
+  <g fill="none" stroke-linejoin="round">
+    <path d="M35 47 70 17l35 30v46H35z" stroke="#20211F" stroke-width="5"/>
+    <path d="M54 57V42h12v15m9 0V42h12v15" stroke="#20211F" stroke-width="4"/>
+    <path d="M72 92c2-19 14-33 34-40-2 20-13 35-34 40Zm0 0c-2-9-6-14-14-18" stroke="#20211F" stroke-width="4"/>
+  </g>
+  <text x="129" y="79" fill="#20211F" font-family="Georgia,serif" font-size="56" letter-spacing="8">LUMA</text>
+  <path d="M130 101h38m116 0h38" stroke="#20211F" stroke-width="3"/>
+  <text x="181" y="108" fill="#20211F" font-family="Arial,sans-serif" font-size="20" letter-spacing="11">HOME</text>
+  <text x="128" y="132" fill="#20211F" font-family="Arial,sans-serif" font-size="10" letter-spacing="2.8">Simple pieces. Beautiful spaces.</text>
+</svg>

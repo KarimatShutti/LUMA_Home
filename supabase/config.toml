@@ -1,0 +1,4 @@
+project_id = "luma-home-training"
+
+[functions.order-confirmation]
+verify_jwt = true
