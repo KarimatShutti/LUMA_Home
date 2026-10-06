@@ -248,25 +248,53 @@ function CheckoutPage() {
   useEffect(()=>{if(profile?.email&&!form.email)setForm(prev=>({...prev,email:profile.email}))},[profile?.email,form.email])
   const subtotal=cart.reduce((sum,line)=>sum+line.product.price*line.quantity,0), delivery=deliveryFor(subtotal)
   const change = (key: keyof typeof form, value: string) => setForm(prev=>({...prev,[key]:value}))
+  const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? 'pk_test_75619623ecf48f6e5f554f7a17c6662536b491fd'
   const validStep = () => {
     if (step===1 && (!form.firstName.trim() || !form.lastName.trim() || !/^\S+@\S+\.\S+$/.test(form.email) || form.phone.trim().length<6)) return 'Please complete your name, email and phone number.'
     if (step===2 && [form.address,form.city,form.state,form.country].some(v=>v.trim().length<2)) return 'Please complete all delivery details.'
     return ''
   }
   const next = () => { const message=validStep(); if(message){setError(message); return} setError(''); setStep(v=>Math.min(3,v+1)); window.scrollTo({top:0,behavior:'smooth'}) }
-  const placeOrder = async () => {
-    if (!supabase || !user || !configured) { setError('Connect Supabase and sign in to place an order.'); return }
-    if (!cart.length || placed) return
+  const createOrder = async () => {
+    if (!supabase || !user || !configured) { setError('Connect Supabase and sign in to place an order.'); return false }
+    if (!cart.length || placed) return false
     setBusy(true); setError('')
     const { data, error: rpcError } = await supabase.rpc('create_order', {
       p_customer_name: `${form.firstName.trim()} ${form.lastName.trim()}`, p_customer_email: form.email.trim(), p_phone: form.phone.trim(),
       p_delivery_address: form.address.trim(), p_city: form.city.trim(), p_state: form.state.trim(), p_country: form.country.trim(),
     })
-    if (rpcError || !data?.id) { console.error('Order creation failed',rpcError); setError(rpcError?.message.includes('Only') ? rpcError.message : 'Something went wrong. We couldn’t complete that request. Please try again.'); setBusy(false); return }
+    if (rpcError || !data?.id) { console.error('Order creation failed',rpcError); setError(rpcError?.message.includes('Only') ? rpcError.message : 'Something went wrong. We couldn’t complete that request. Please try again.'); setBusy(false); return false }
     setPlaced(true)
     const { error: mailError } = await supabase.functions.invoke('order-confirmation', { body: { order_id: data.id } })
     if (mailError) console.error('Order saved, confirmation email could not be sent',mailError)
-    await reload(); setBusy(false); window.location.assign(`/order-confirmation/${data.id}`)
+    await reload(); setBusy(false); window.location.assign(`/order-confirmation/${data.id}`); return true
+  }
+  const startPaystackPayment = () => {
+    if (!window.PaystackPop) {
+      setError('Paystack is unavailable right now. Please try again in a moment.')
+      return
+    }
+    const totalAmount = Math.round((subtotal + delivery) * 100)
+    const handler = window.PaystackPop.setup({
+      key: paystackPublicKey,
+      email: form.email.trim(),
+      amount: totalAmount,
+      currency: 'NGN',
+      ref: `LUMA-${Date.now()}`,
+      callback: async (response) => {
+        if (!response.reference) {
+          setError('Payment confirmation did not return a reference. Please try again.')
+          setBusy(false)
+          return
+        }
+        await createOrder()
+      },
+      onClose: () => {
+        setBusy(false)
+        setError('Payment was cancelled. Your order was not placed.')
+      }
+    })
+    setBusy(true); setError(''); handler.openIframe()
   }
   if (loading) return <main className="page-main"><div className="loading-page"><span className="spinner"/> Preparing checkout…</div></main>
   if (configured && !user) return <main className="page-main"><EmptyState icon={<LockKeyhole />} title="Sign in to continue." text="Your cart and order history stay safely connected to your account." action={<Link className="button button-dark" to="/login">Sign in to your account</Link>} /></main>
@@ -275,7 +303,7 @@ function CheckoutPage() {
     {step===1&&<div><h2>Customer information</h2><p>Where should we send your order updates?</p><div className="form-grid"><FormField label="First name" value={form.firstName} onChange={v=>change('firstName',v)} autoComplete="given-name" /><FormField label="Last name" value={form.lastName} onChange={v=>change('lastName',v)} autoComplete="family-name" /><FormField label="Email address" type="email" value={form.email || profile?.email || ''} onChange={v=>change('email',v)} autoComplete="email" /><FormField label="Phone number" type="tel" value={form.phone} onChange={v=>change('phone',v)} autoComplete="tel" /></div></div>}
     {step===2&&<div><h2>Delivery details</h2><p>Tell us where this little piece is going.</p><div className="form-grid"><FormField className="form-span" label="Street address" value={form.address} onChange={v=>change('address',v)} autoComplete="street-address" /><FormField label="City" value={form.city} onChange={v=>change('city',v)} autoComplete="address-level2" /><FormField label="State" value={form.state} onChange={v=>change('state',v)} autoComplete="address-level1" /><FormField label="Country" value={form.country} onChange={v=>change('country',v)} autoComplete="country-name" /></div></div>}
     {step===3&&<div><h2>Review your order</h2><p>Take a last look. We’ll save your order once you place it.</p><div className="review-items">{cart.map(line=><div className="review-line" key={line.product_id}><img src={line.product.image_url} alt="" /><div><strong>{line.product.name}</strong><span>Qty {line.quantity} · {money(line.product.price)} each</span></div><b>{money(line.product.price*line.quantity)}</b></div>)}</div><div className="delivery-address-review"><div><strong>Customer</strong><span>{form.firstName} {form.lastName}<br />{form.email} · {form.phone}</span></div><button onClick={()=>setStep(1)}>Edit</button><div><strong>Delivery to</strong><span>{form.address}<br />{form.city}, {form.state}, {form.country}</span></div><button onClick={()=>setStep(2)}>Edit</button></div></div>}
-    {error&&<p className="form-error" role="alert">{error}</p>}{!configured&&<div className="inline-notice"><LockKeyhole size={17}/><span>Preview mode: connect Supabase to save your order and enable checkout.</span></div>}<div className="checkout-buttons">{step>1&&<button className="button button-outline" onClick={()=>setStep(v=>v-1)}><ArrowLeft size={16}/> Back</button>}{step<3?<button className="button button-dark" onClick={next}>Continue <ArrowRight size={16}/></button>:<button className="button button-dark" onClick={()=>void placeOrder()} disabled={!configured||busy||placed}>{busy?'Placing your order…':'Place order'} <ArrowRight size={16}/></button>}</div><small className="checkout-payment-note"><LockKeyhole size={13}/> No payment is taken. “Place order” records a training order.</small>
+    {error&&<p className="form-error" role="alert">{error}</p>}{!configured&&<div className="inline-notice"><LockKeyhole size={17}/><span>Preview mode: connect Supabase to save your order and enable checkout.</span></div>}<div className="checkout-buttons">{step>1&&<button className="button button-outline" onClick={()=>setStep(v=>v-1)}><ArrowLeft size={16}/> Back</button>}{step<3?<button className="button button-dark" onClick={next}>Continue <ArrowRight size={16}/></button>:<button className="button button-dark" onClick={startPaystackPayment} disabled={!configured||busy||placed}>{busy?'Processing payment…':'Pay with Paystack'} <ArrowRight size={16}/></button>}</div><small className="checkout-payment-note"><LockKeyhole size={13}/> Secure checkout powered by Paystack in test mode.</small>
     </section><aside className="order-summary checkout-summary"><p className="eyebrow">{cart.length} {cart.length===1?'piece':'pieces'}</p><h2>Your order</h2>{cart.map(line=><div className="checkout-mini-item" key={line.product_id}><img src={line.product.image_url} alt=""/><div><strong>{line.product.name}</strong><span>Qty {line.quantity}</span></div><b>{money(line.product.price*line.quantity)}</b></div>)}<div className="summary-line"><span>Subtotal</span><span>{money(subtotal)}</span></div><div className="summary-line"><span>Delivery</span><span>{delivery===0?'Complimentary':money(delivery)}</span></div><div className="summary-total"><span>Total</span><strong>{money(subtotal+delivery)}</strong></div></aside></div></main>
 }
 
