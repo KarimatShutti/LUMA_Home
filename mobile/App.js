@@ -255,30 +255,57 @@ function App() {
   );
 
   const handleAuth = async () => {
+    const cleanedEmail = email.trim();
+    const cleanedPassword = password.trim();
+
     if (!supabase) {
       Alert.alert('Supabase not configured', 'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to the mobile .env file.');
+      return;
+    }
+
+    if (!cleanedEmail || !cleanedPassword || (authMode === 'signup' && !name.trim())) {
+      Alert.alert('Missing details', 'Please complete all fields before continuing.');
       return;
     }
 
     setBusy(true);
     try {
       if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanedEmail,
+          password: cleanedPassword,
+        });
+
         if (error) {
           Alert.alert('Sign in failed', error.message);
+          return;
+        }
+
+        if (data.session) {
+          setSession(data.session);
+          setEmail('');
+          setPassword('');
+          Alert.alert('Welcome back', 'You are now signed in.');
         }
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name || 'LUMA Customer' } },
+          email: cleanedEmail,
+          password: cleanedPassword,
+          options: {
+            data: { full_name: name.trim() || 'LUMA Customer' },
+          },
         });
 
         if (error) {
           Alert.alert('Create account failed', error.message);
-        } else {
-          Alert.alert('Account created', 'Check your email to confirm the registration.');
+          return;
         }
+
+        setAuthMode('login');
+        setName('');
+        setEmail('');
+        setPassword('');
+        Alert.alert('Account created', 'Check your email to confirm the registration.');
       }
     } finally {
       setBusy(false);
