@@ -1,5 +1,7 @@
 # LUMA HOME — Ecommerce Training Project
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/0d44431c-f555-4d8f-acfa-0ae84bcd0dfc/deploy-status)](https://app.netlify.com/projects/gregarious-kashata-48c7c6/deploys)
+
 A responsive home décor storefront built as a fictional training project. The UI uses React, TypeScript and Vite. Supabase provides Postgres, Auth, Row Level Security, image storage and server-side order processing. Mailgun order confirmations are sent from a Supabase Edge Function.
 
 The design follows the supplied LUMA HOME identity board: forest green `#1B3D2F`, warm gold `#C9A96A`, ivory `#FAF9F6`, sand `#D7C4A7`, charcoal `#333333`, Playfair Display headings and Montserrat UI text. The source attachment is a brand board rather than a standalone logo file, so the header uses a small inline house/leaf symbol with a LUMA HOME wordmark; replace it with approved logo files if they become available.
