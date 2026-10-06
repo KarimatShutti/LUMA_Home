@@ -289,7 +289,15 @@ function App() {
 
         if (error) {
           const message = error.message.toLowerCase();
-          Alert.alert('Sign in failed', message.includes('invalid login') || message.includes('invalid credentials') ? 'Incorrect email or password.' : error.message);
+          if (message.includes('email not confirmed') || message.includes('not confirmed')) {
+            Alert.alert('Email not confirmed', 'Your LUMA account email is not confirmed yet. Check your inbox or disable email confirmation in Supabase for testing.');
+            return;
+          }
+          if (message.includes('invalid login') || message.includes('invalid credentials') || message.includes('user not found')) {
+            Alert.alert('Sign in failed', 'Incorrect email or password. Use the same LUMA store email and password you created for the app.');
+            return;
+          }
+          Alert.alert('Sign in failed', error.message);
           return;
         }
 
@@ -309,7 +317,16 @@ function App() {
         });
 
         if (error) {
-          Alert.alert('Create account failed', error.message.includes('already') ? 'An account already exists for this email.' : error.message);
+          const lower = error.message.toLowerCase();
+          if (lower.includes('already')) {
+            Alert.alert('Create account failed', 'An account already exists for this email.');
+            return;
+          }
+          if (lower.includes('smtp') || lower.includes('email provider')) {
+            Alert.alert('Create account failed', 'Email signup is not set up yet in Supabase. Turn off email confirmation or configure an email provider for testing.');
+            return;
+          }
+          Alert.alert('Create account failed', error.message);
           return;
         }
 
@@ -410,7 +427,7 @@ function App() {
         <View style={styles.authCard}>
           <Text style={styles.brand}>LUMA HOME</Text>
           <Text style={styles.title}>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</Text>
-          <Text style={styles.subtitle}>Use the same Supabase account on web and mobile.</Text>
+          <Text style={styles.subtitle}>Use the same LUMA store account on web and mobile. This is separate from your Expo account.</Text>
 
           {authMode === 'signup' && (
             <TextInput

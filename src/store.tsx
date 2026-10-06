@@ -183,7 +183,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) return { error: 'Please enter a valid email address.' }
     if (!trimmedPassword || trimmedPassword.length < 6) return { error: 'Password must be at least 6 characters long.' }
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: trimmedPassword })
-    return error ? { error: error.message.includes('Invalid login') || error.message.toLowerCase().includes('invalid credentials') ? 'Incorrect email or password.' : 'Those details could not be verified. Please try again.' } : {}
+    if (!error) return {}
+    const message = error.message.toLowerCase()
+    if (message.includes('email not confirmed') || message.includes('not confirmed')) {
+      return { error: 'Your LUMA account email is not confirmed yet. Check your inbox or disable email confirmation in Supabase for testing.' }
+    }
+    if (message.includes('invalid login') || message.includes('invalid credentials') || message.includes('user not found')) {
+      return { error: 'Incorrect email or password. Use the same LUMA store email and password you created for the app.' }
+    }
+    return { error: 'Those details could not be verified. Please try again.' }
   }
   const signUp = async (name: string, email: string, password: string): Promise<Result> => {
     if (!supabase) return { error: 'Add your Supabase settings to .env to enable accounts.' }
@@ -202,7 +210,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: redirectUrl ?? undefined,
       },
     })
-    return error ? { error: error.message.includes('already') ? 'An account already exists for this email.' : 'We could not create your account. Please try again.' } : {}
+    if (!error) return {}
+    if (error.message.includes('already')) return { error: 'An account already exists for this email.' }
+    if (error.message.toLowerCase().includes('smtp') || error.message.toLowerCase().includes('email provider')) {
+      return { error: 'Email signup is not set up yet in Supabase. Turn off email confirmation or configure an email provider for testing.' }
+    }
+    return { error: 'We could not create your account. Please try again.' }
   }
   const signInGoogle = async (): Promise<Result> => {
     if (!supabase) return { error: 'Add your Supabase settings to .env to enable Google sign-in.' }
