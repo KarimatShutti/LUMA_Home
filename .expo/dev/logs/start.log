@@ -1,0 +1,3 @@
+{"_e":"root:init","_t":1791299423926,"format":"v0-jsonl","version":"57.0.28"}
+{"_e":"env:mode","_t":1791299423928,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1791299423934,"mode":"development","files":["../../../.env.local"],"env":{"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY":"sb_publishable_OQRwLo6HCMXmrdq4IJamdQ_Lgd7tssj","NEXT_PUBLIC_SUPABASE_URL":"https://wydvylceommznhveywzj.supabase.co","VITE_PAYSTACK_PUBLIC_KEY":"pk_test_75619623ecf48f6e5f554f7a17c6662536b491fd","VITE_SUPABASE_PUBLISHABLE_KEY":"sb_publishable_OQRwLo6HCMXmrdq4IJamdQ_Lgd7tssj","VITE_SUPABASE_URL":"https://wydvylceommznhveywzj.supabase.co"}}
