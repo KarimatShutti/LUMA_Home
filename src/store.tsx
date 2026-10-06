@@ -178,17 +178,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string): Promise<Result> => {
     if (!supabase) return { error: 'Add your Supabase settings to .env to enable accounts.' }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return error ? { error: 'Those details could not be verified. Please try again.' } : {}
+    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedPassword = password.trim()
+    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) return { error: 'Please enter a valid email address.' }
+    if (!trimmedPassword || trimmedPassword.length < 6) return { error: 'Password must be at least 6 characters long.' }
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: trimmedPassword })
+    return error ? { error: error.message.includes('Invalid login') || error.message.toLowerCase().includes('invalid credentials') ? 'Incorrect email or password.' : 'Those details could not be verified. Please try again.' } : {}
   }
   const signUp = async (name: string, email: string, password: string): Promise<Result> => {
     if (!supabase) return { error: 'Add your Supabase settings to .env to enable accounts.' }
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: window.location.origin } })
+    const trimmedName = name.trim()
+    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedPassword = password.trim()
+    if (!trimmedName) return { error: 'Please enter your name.' }
+    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) return { error: 'Please enter a valid email address.' }
+    if (!trimmedPassword || trimmedPassword.length < 6) return { error: 'Password must be at least 6 characters long.' }
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined
+    const { error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: trimmedPassword,
+      options: {
+        data: { full_name: trimmedName },
+        emailRedirectTo: redirectUrl ?? undefined,
+      },
+    })
     return error ? { error: error.message.includes('already') ? 'An account already exists for this email.' : 'We could not create your account. Please try again.' } : {}
   }
   const signInGoogle = async (): Promise<Result> => {
     if (!supabase) return { error: 'Add your Supabase settings to .env to enable Google sign-in.' }
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/account` } })
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl ?? undefined } })
     return error ? { error: 'Google sign-in could not be started. Please try again.' } : {}
   }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setUser(null); setProfile(null); setCart(isConfigured ? [] : localCart()) }

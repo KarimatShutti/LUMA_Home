@@ -255,16 +255,27 @@ function App() {
   );
 
   const handleAuth = async () => {
-    const cleanedEmail = email.trim();
+    const cleanedEmail = email.trim().toLowerCase();
     const cleanedPassword = password.trim();
+    const cleanName = name.trim();
 
     if (!supabase) {
       Alert.alert('Supabase not configured', 'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to the mobile .env file.');
       return;
     }
 
-    if (!cleanedEmail || !cleanedPassword || (authMode === 'signup' && !name.trim())) {
-      Alert.alert('Missing details', 'Please complete all fields before continuing.');
+    if (!cleanedEmail || !/^\S+@\S+\.\S+$/.test(cleanedEmail)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+
+    if (!cleanedPassword || cleanedPassword.length < 6) {
+      Alert.alert('Password too short', 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (authMode === 'signup' && !cleanName) {
+      Alert.alert('Missing name', 'Please enter your full name.');
       return;
     }
 
@@ -277,7 +288,8 @@ function App() {
         });
 
         if (error) {
-          Alert.alert('Sign in failed', error.message);
+          const message = error.message.toLowerCase();
+          Alert.alert('Sign in failed', message.includes('invalid login') || message.includes('invalid credentials') ? 'Incorrect email or password.' : error.message);
           return;
         }
 
@@ -292,12 +304,12 @@ function App() {
           email: cleanedEmail,
           password: cleanedPassword,
           options: {
-            data: { full_name: name.trim() || 'LUMA Customer' },
+            data: { full_name: cleanName || 'LUMA Customer' },
           },
         });
 
         if (error) {
-          Alert.alert('Create account failed', error.message);
+          Alert.alert('Create account failed', error.message.includes('already') ? 'An account already exists for this email.' : error.message);
           return;
         }
 
