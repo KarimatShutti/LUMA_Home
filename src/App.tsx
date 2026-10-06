@@ -269,6 +269,32 @@ function CheckoutPage() {
     if (mailError) console.error('Order saved, confirmation email could not be sent',mailError)
     await reload(); setBusy(false); window.location.assign(`/order-confirmation/${data.id}`); return true
   }
+  const verifyPaystackTransaction = async (reference: string, amountInKobo: number): Promise<boolean> => {
+    try {
+      if (!supabase) return false
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paystack-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ reference, amount: amountInKobo }),
+      })
+      const payload = await response.json() as { ok?: boolean; verified?: boolean; error?: string }
+      if (!response.ok || !payload.ok || !payload.verified) {
+        setError(payload.error ?? 'Payment verification failed. Please try again.')
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error('Paystack verification failed', error)
+      setError('Payment verification could not be completed. Please try again.')
+      return false
+    }
+  }
+
   const startPaystackPayment = () => {
     if (!window.PaystackPop) {
       setError('Paystack is unavailable right now. Please try again in a moment.')
@@ -284,6 +310,11 @@ function CheckoutPage() {
       callback: async (response) => {
         if (!response.reference) {
           setError('Payment confirmation did not return a reference. Please try again.')
+          setBusy(false)
+          return
+        }
+        const verified = await verifyPaystackTransaction(response.reference, totalAmount)
+        if (!verified) {
           setBusy(false)
           return
         }
